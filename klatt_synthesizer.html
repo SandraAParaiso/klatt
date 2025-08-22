@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Klatt Cascade/Parallel Formant Synthesizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        .controls-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .control-group {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .control-group:hover {
+            transform: translateY(-5px);
+        }
+
+        .control-group h3 {
+            color: #495057;
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            text-align: center;
+            border-bottom: 2px solid #dee2e6;
+            padding-bottom: 10px;
+        }
+
+        .slider-container {
+            margin-bottom: 20px;
+        }
+
+        .slider-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 4px;
+            background: #ddd;
+            outline: none;
+            appearance: none;
+            transition: all 0.3s ease;
+        }
+
+        .slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .play-controls {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .play-button {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
+            margin: 0 10px;
+        }
+
+        .play-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(40, 167, 69, 0.6);
+        }
+
+        .play-button:active {
+            transform: translateY(0);
+        }
+
+        .play-button.stop {
+            background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
+        }
+
+        .play-button.stop:hover {
+            box-shadow: 0 10px 25px rgba(220, 53, 69, 0.6);
+        }
+
+        .preset-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .preset-button {
+            background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .preset-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(111, 66, 193, 0.4);
+        }
+
+        .spectrum-container {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .spectrum-container h3 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #495057;
+        }
+
+        #spectrum {
+            width: 100%;
+            height: 200px;
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            background: white;
+        }
+
+        .info-section {
+            background: #e3f2fd;
+            border-radius: 15px;
+            padding: 25px;
+            margin-top: 30px;
+            border-left: 5px solid #2196f3;
+        }
+
+        .info-section h3 {
+            color: #1976d2;
+            margin-bottom: 15px;
+        }
+
+        .info-section p {
+            line-height: 1.6;
+            color: #424242;
+        }
+
+        @media (max-width: 768px) {
+            .controls-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .preset-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .main-content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Klatt Formant Synthesizer</h1>
+            <p>Web implementation of Dennis H. Klatt's cascade/parallel formant synthesizer (1980)</p>
+        </div>
+        
+        <div class="main-content">
+            <div class="preset-buttons">
+                <button class="preset-button" onclick="setVowel('i')">Vowel [i]</button>
+                <button class="preset-button" onclick="setVowel('e')">Vowel [e]</button>
+                <button class="preset-button" onclick="setVowel('a')">Vowel [a]</button>
+                <button class="preset-button" onclick="setVowel('o')">Vowel [o]</button>
+                <button class="preset-button" onclick="setVowel('u')">Vowel [u]</button>
+            </div>
+
+            <div class="controls-grid">
+                <div class="control-group">
+                    <h3>Fundamental Frequency</h3>
+                    <div class="slider-container">
+                        <div class="slider-label">
+                            <span>F0 (Hz)</span>
+                            <span id="f0-value">120</span>
+                        </div>
+                        <input type="range" id="f0-slider" class="slider" min="80" max="400" value="120" step="1">
+                    </div>
+                    
+                    <div class="slider-container">
+                        <div class="slider-label">
+                            <span>Amplitude</span>
+                            <span id="amp-value">0.3</span>
+                        </div>
+                        <input type="range" id="amp-slider" class="slider" min="0" max="1" value="0.3" step="0.01">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>First Formant (F1)</h3>
+                    <div class="slider-container">
+                        <div class="slider-label">
+                            <span>Frequency (Hz)</span>
+                            <span id="f1-value">450</span>
+                        </div>
+                        <input type="range" id="f1-slider" class="slider" min="200" max="900" value="450" step="5">
+                    </div>
+                    
+                    <div class="slider-container">
+                        <div class="slider-label">
+                            <span>Bandwidth (Hz)</span>
+                            <span id="b1-value">60</span>
+                        </div>
+                        <input type="range" id="b1-slider" class="slider" min="30" max="200" value="60" step="5">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>Second Formant (F2)</h3>
+                    <div class="slider-container">
+                        <div class="slider-label">
+                            <span>Frequency (Hz)</span>
+                            <span id="f2-value">1450</span>
+                        </div>
+                        <input type="range" id="f2-slider" class="slider" min="500" max="2500" value="1450" step="10">
+                    </div>
+                    
+                    <div class="slider-container">
+                        <div class="slider-label">
+                            <span>Bandwidth (Hz)</span>
+                            <span id="b2-value">90</span>
+                        </div>
+                        <input type="range" id="b2-slider" class="slider" min="40" max="200" value="90" step="5">
+                    </div>
+                </div>
+
+                <div class="control-group">
+                    <h3>Third Formant (F3)</h3>
+                    <div class="slider-container">
+                        <div class="slider-label">
+                            <span>Frequency (Hz)</span>
+                            <span id="f3-value">2450</span>
+                        </div>
+                        <input type="range" id="f3-slider" class="slider" min="1300" max="3500" value="2450" step="10">
+                    </div>
+                    
+                    <div class="slider-container">
+                        <div class="slider-label">
+                            <span>Bandwidth (Hz)</span>
+                            <span id="b3-value">120</span>
+                        </div>
+                        <input type="range" id="b3-slider" class="slider" min="50" max="300" value="120" step="5">
+                    </div>
+                </div>
+            </div>
+
+            <div class="play-controls">
+                <button class="play-button" id="play-button" onclick="toggleSound()">▶ Play Vowel</button>
+                <button class="play-button stop" onclick="stopSound()">⏹ Stop</button>
+            </div>
+
+            <div class="spectrum-container">
+                <h3>Formant Spectrum Visualization</h3>
+                <canvas id="spectrum"></canvas>
+            </div>
+
+            <div class="info-section">
+                <h3>About the Klatt Synthesizer</h3>
+                <p>
+                    This web implementation is based on Dennis H. Klatt's seminal 1980 paper "Software for a cascade/parallel formant synthesizer." 
+                    The original synthesizer was designed to generate high-quality synthetic speech using formant resonators connected in either 
+                    cascade or parallel configurations. This version focuses on vowel synthesis using the cascade model, where each formant 
+                    resonator is characterized by its center frequency and bandwidth parameters.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class KlattSynthesizer {
+            constructor() {
+                this.audioContext = null;
+                this.oscillators = [];
+                this.gainNodes = [];
+                this.filters = [];
+                this.masterGain = null;
+                this.isPlaying = false;
+                this.sampleRate = 44100;
+                
+                // Synthesis parameters
+                this.f0 = 120;
+                this.amp = 0.3;
+                this.f1 = 450;
+                this.b1 = 60;
+                this.f2 = 1450;
+                this.b2 = 90;
+                this.f3 = 2450;
+                this.b3 = 120;
+                
+                this.initializeControls();
+                this.drawSpectrum();
+            }
+
+            async initializeAudio() {
+                if (!this.audioContext) {
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    if (this.audioContext.state === 'suspended') {
+                        await this.audioContext.resume();
+                    }
+                }
+            }
+
+            createGlottalSource() {
+                // Create sawtooth wave as glottal source (approximation)
+                const oscillator = this.audioContext.createOscillator();
+                oscillator.type = 'sawtooth';
+                oscillator.frequency.setValueAtTime(this.f0, this.audioContext.currentTime);
+                
+                return oscillator;
+            }
+
+            createFormantFilter(frequency, bandwidth) {
+                // Create formant resonator using biquad filter
+                const filter = this.audioContext.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+                filter.Q.setValueAtTime(frequency / bandwidth, this.audioContext.currentTime);
+                
+                return filter;
+            }
+
+            createRadiationFilter() {
+                // High-pass filter to simulate radiation characteristics
+                const filter = this.audioContext.createBiquadFilter();
+                filter.type = 'highpass';
+                filter.frequency.setValueAtTime(100, this.audioContext.currentTime);
+                filter.Q.setValueAtTime(0.7, this.audioContext.currentTime);
+                
+                return filter;
+            }
+
+            async startSound() {
+                await this.initializeAudio();
+                
+                if (this.isPlaying) return;
+                
+                // Create glottal source
+                const source = this.createGlottalSource();
+                
+                // Create formant filters (cascade configuration)
+                const f1Filter = this.createFormantFilter(this.f1, this.b1);
+                const f2Filter = this.createFormantFilter(this.f2, this.b2);
+                const f3Filter = this.createFormantFilter(this.f3, this.b3);
+                
+                // Create radiation filter
+                const radiationFilter = this.createRadiationFilter();
+                
+                // Create master gain
+                const masterGain = this.audioContext.createGain();
+                masterGain.gain.setValueAtTime(this.amp, this.audioContext.currentTime);
+                
+                // Connect cascade: source -> F1 -> F2 -> F3 -> radiation -> gain -> output
+                source.connect(f1Filter);
+                f1Filter.connect(f2Filter);
+                f2Filter.connect(f3Filter);
+                f3Filter.connect(radiationFilter);
+                radiationFilter.connect(masterGain);
+                masterGain.connect(this.audioContext.destination);
+                
+                // Store references
+                this.oscillators = [source];
+                this.filters = [f1Filter, f2Filter, f3Filter, radiationFilter];
+                this.masterGain = masterGain;
+                
+                // Start oscillator
+                source.start();
+                
+                this.isPlaying = true;
+                document.getElementById('play-button').textContent = '⏸ Pause';
+            }
+
+            stopSound() {
+                if (!this.isPlaying) return;
+                
+                // Stop all oscillators
+                this.oscillators.forEach(osc => {
+                    try {
+                        osc.stop();
+                    } catch (e) {
+                        // Oscillator might already be stopped
+                    }
+                });
+                
+                this.oscillators = [];
+                this.filters = [];
+                this.masterGain = null;
+                this.isPlaying = false;
+                
+                document.getElementById('play-button').textContent = '▶ Play Vowel';
+            }
+
+            updateParameters() {
+                if (this.isPlaying && this.filters.length >= 3) {
+                    const currentTime = this.audioContext.currentTime;
+                    
+                    // Update fundamental frequency
+                    this.oscillators.forEach(osc => {
+                        osc.frequency.setValueAtTime(this.f0, currentTime);
+                    });
+                    
+                    // Update formant frequencies and bandwidths
+                    this.filters[0].frequency.setValueAtTime(this.f1, currentTime);
+                    this.filters[0].Q.setValueAtTime(this.f1 / this.b1, currentTime);
+                    
+                    this.filters[1].frequency.setValueAtTime(this.f2, currentTime);
+                    this.filters[1].Q.setValueAtTime(this.f2 / this.b2, currentTime);
+                    
+                    this.filters[2].frequency.setValueAtTime(this.f3, currentTime);
+                    this.filters[2].Q.setValueAtTime(this.f3 / this.b3, currentTime);
+                    
+                    // Update amplitude
+                    if (this.masterGain) {
+                        this.masterGain.gain.setValueAtTime(this.amp, currentTime);
+                    }
+                }
+                
+                this.drawSpectrum();
+            }
+
+            initializeControls() {
+                // F0 control
+                const f0Slider = document.getElementById('f0-slider');
+                const f0Value = document.getElementById('f0-value');
+                f0Slider.addEventListener('input', (e) => {
+                    this.f0 = parseFloat(e.target.value);
+                    f0Value.textContent = this.f0;
+                    this.updateParameters();
+                });
+
+                // Amplitude control
+                const ampSlider = document.getElementById('amp-slider');
+                const ampValue = document.getElementById('amp-value');
+                ampSlider.addEventListener('input', (e) => {
+                    this.amp = parseFloat(e.target.value);
+                    ampValue.textContent = this.amp.toFixed(2);
+                    this.updateParameters();
+                });
+
+                // F1 controls
+                const f1Slider = document.getElementById('f1-slider');
+                const f1Value = document.getElementById('f1-value');
+                f1Slider.addEventListener('input', (e) => {
+                    this.f1 = parseFloat(e.target.value);
+                    f1Value.textContent = this.f1;
+                    this.updateParameters();
+                });
+
+                const b1Slider = document.getElementById('b1-slider');
+                const b1Value = document.getElementById('b1-value');
+                b1Slider.addEventListener('input', (e) => {
+                    this.b1 = parseFloat(e.target.value);
+                    b1Value.textContent = this.b1;
+                    this.updateParameters();
+                });
+
+                // F2 controls
+                const f2Slider = document.getElementById('f2-slider');
+                const f2Value = document.getElementById('f2-value');
+                f2Slider.addEventListener('input', (e) => {
+                    this.f2 = parseFloat(e.target.value);
+                    f2Value.textContent = this.f2;
+                    this.updateParameters();
+                });
+
+                const b2Slider = document.getElementById('b2-slider');
+                const b2Value = document.getElementById('b2-value');
+                b2Slider.addEventListener('input', (e) => {
+                    this.b2 = parseFloat(e.target.value);
+                    b2Value.textContent = this.b2;
+                    this.updateParameters();
+                });
+
+                // F3 controls
+                const f3Slider = document.getElementById('f3-slider');
+                const f3Value = document.getElementById('f3-value');
+                f3Slider.addEventListener('input', (e) => {
+                    this.f3 = parseFloat(e.target.value);
+                    f3Value.textContent = this.f3;
+                    this.updateParameters();
+                });
+
+                const b3Slider = document.getElementById('b3-slider');
+                const b3Value = document.getElementById('b3-value');
+                b3Slider.addEventListener('input', (e) => {
+                    this.b3 = parseFloat(e.target.value);
+                    b3Value.textContent = this.b3;
+                    this.updateParameters();
+                });
+            }
+
+            drawSpectrum() {
+                const canvas = document.getElementById('spectrum');
+                const ctx = canvas.getContext('2d');
+                
+                // Set canvas size
+                canvas.width = canvas.offsetWidth;
+                canvas.height = canvas.offsetHeight;
+                
+                const width = canvas.width;
+                const height = canvas.height;
+                
+                // Clear canvas
+                ctx.clearRect(0, 0, width, height);
+                
+                // Draw frequency axis
+                ctx.strokeStyle = '#ddd';
+                ctx.lineWidth = 1;
+                
+                // Vertical grid lines (frequency markers)
+                for (let freq = 0; freq <= 4000; freq += 500) {
+                    const x = (freq / 4000) * width;
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, height);
+                    ctx.stroke();
+                    
+                    // Frequency labels
+                    ctx.fillStyle = '#666';
+                    ctx.font = '12px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(freq + 'Hz', x, height - 5);
+                }
+                
+                // Draw formant response
+                ctx.strokeStyle = '#2196F3';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                
+                const maxFreq = 4000;
+                const points = 1000;
+                
+                for (let i = 0; i < points; i++) {
+                    const freq = (i / points) * maxFreq;
+                    const x = (freq / maxFreq) * width;
+                    
+                    // Calculate formant response (simplified)
+                    let response = 0;
+                    
+                    // F1 response
+                    const q1 = this.f1 / this.b1;
+                    const f1Response = q1 / (1 + Math.pow(q1 * (freq - this.f1) / this.f1, 2));
+                    
+                    // F2 response
+                    const q2 = this.f2 / this.b2;
+                    const f2Response = q2 / (1 + Math.pow(q2 * (freq - this.f2) / this.f2, 2));
+                    
+                    // F3 response
+                    const q3 = this.f3 / this.b3;
+                    const f3Response = q3 / (1 + Math.pow(q3 * (freq - this.f3) / this.f3, 2));
+                    
+                    // Combine formant responses (simplified cascade)
+                    response = f1Response * f2Response * f3Response;
+                    
+                    // Convert to dB and normalize
+                    const dB = 20 * Math.log10(response + 0.001);
+                    const normalizedDB = Math.max(0, (dB + 60) / 60); // Normalize -60dB to 0dB range
+                    const y = height - (normalizedDB * height);
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                
+                ctx.stroke();
+                
+                // Draw formant frequency markers
+                ctx.strokeStyle = '#E91E63';
+                ctx.lineWidth = 2;
+                
+                // F1 marker
+                const f1X = (this.f1 / maxFreq) * width;
+                ctx.beginPath();
+                ctx.moveTo(f1X, 0);
+                ctx.lineTo(f1X, height);
+                ctx.stroke();
+                
+                // F2 marker
+                const f2X = (this.f2 / maxFreq) * width;
+                ctx.beginPath();
+                ctx.moveTo(f2X, 0);
+                ctx.lineTo(f2X, height);
+                ctx.stroke();
+                
+                // F3 marker
+                const f3X = (this.f3 / maxFreq) * width;
+                ctx.beginPath();
+                ctx.moveTo(f3X, 0);
+                ctx.lineTo(f3X, height);
+                ctx.stroke();
+                
+                // Labels for formants
+                ctx.fillStyle = '#E91E63';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('F1', f1X, 20);
+                ctx.fillText('F2', f2X, 20);
+                ctx.fillText('F3', f3X, 20);
+            }
+
+            setVowelPreset(vowel) {
+                // Vowel formant values based on Klatt's Table II
+                const vowelData = {
+                    'i': { f1: 310, b1: 45, f2: 2020, b2: 200, f3: 2960, b3: 400 },
+                    'e': { f1: 530, b1: 60, f2: 1680, b2: 90, f3: 2500, b3: 200 },
+                    'a': { f1: 700, b1: 130, f2: 1220, b2: 70, f3: 2600, b3: 160 },
+                    'o': { f1: 540, b1: 80, f2: 1100, b2: 70, f3: 2300, b3: 70 },
+                    'u': { f1: 350, b1: 65, f2: 1250, b2: 110, f3: 2200, b3: 140 }
+                };
+                
+                const data = vowelData[vowel];
+                if (!data) return;
+                
+                this.f1 = data.f1;
+                this.b1 = data.b1;
+                this.f2 = data.f2;
+                this.b2 = data.b2;
+                this.f3 = data.f3;
+                this.b3 = data.b3;
+                
+                // Update sliders and displays
+                document.getElementById('f1-slider').value = this.f1;
+                document.getElementById('f1-value').textContent = this.f1;
+                document.getElementById('b1-slider').value = this.b1;
+                document.getElementById('b1-value').textContent = this.b1;
+                
+                document.getElementById('f2-slider').value = this.f2;
+                document.getElementById('f2-value').textContent = this.f2;
+                document.getElementById('b2-slider').value = this.b2;
+                document.getElementById('b2-value').textContent = this.b2;
+                
+                document.getElementById('f3-slider').value = this.f3;
+                document.getElementById('f3-value').textContent = this.f3;
+                document.getElementById('b3-slider').value = this.b3;
+                document.getElementById('b3-value').textContent = this.b3;
+                
+                this.updateParameters();
+            }
+        }
+
+        // Global synthesizer instance
+        let synthesizer;
+
+        // Initialize synthesizer when page loads
+        window.addEventListener('load', () => {
+            synthesizer = new KlattSynthesizer();
+        });
+
+        // Control functions
+        async function toggleSound() {
+            if (!synthesizer.isPlaying) {
+                await synthesizer.startSound();
+            } else {
+                synthesizer.stopSound();
+            }
+        }
+
+        function stopSound() {
+            synthesizer.stopSound();
+        }
+
+        function setVowel(vowel) {
+            synthesizer.setVowelPreset(vowel);
+        }
+
+        // Handle window resize for spectrum canvas
+        window.addEventListener('resize', () => {
+            if (synthesizer) {
+                synthesizer.drawSpectrum();
+            }
+        });
+    </script>
+</body>
+</html>
